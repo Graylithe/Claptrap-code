@@ -160,11 +160,11 @@ void setup() {
     digitalWrite(PWM_A, LOW);
     digitalWrite(PWM_B, LOW);
 
-    initialangle = 40.00;
+    initialangle = 39.90;
     expectedangle = initialangle;
     anglelimithigh = 20;
     anglelimitlow = -20;
-    lowoutthreshold = 40;
+    lowoutthreshold = 30;
 	outprev = 0;
 
     delay(5000);
@@ -192,7 +192,7 @@ void loop() {
         // .
         // .
         // .
-    }
+	}
 
     // reset interrupt flag and get INT_STATUS byte
     mpuInterrupt = false;
@@ -247,37 +247,24 @@ void loop() {
         
         angle = ypr[1]*180/M_PI - initialangle;
         anglespeed = (float)gyro[1];
+        angleerror = angle - expectedangle;
         
-        //angleerror = angle - expectedangle;
-        
-        //out = ( pow(( (ypr[1]-0.02)*60 ), 3)*5000 ) - ( pow( ((gyro[2]+4)*0.4), 5)*60 );
-        //out = ( ((ypr[1]*180/M_PI)-39)*40 ) - ( gyro[2]*10 );
-		//kp = pow(angle*1,3)*20;
-		kp = angle*60;
-		ki = -pow(anglespeed*0.1,3)*50;
-		//kd = pow(angleerror*1.2,3)*40;
+        //kp = pow(angle*0.8,3)*40;
+		//ki = -pow(anglespeed*0.3,3)*1;
+		//kd = pow(angleerror*1.2,3)*50;
         //out = kp + ki + kd;
-		out = kp;
-		//out = (outprev + out)/2;
-        /*if (out>0){
-          if(out<lowoutthreshold){
-            out = 0;
-          }
-        }else{
-          if(out>(-lowoutthreshold)){
-            out = 0;
-          }
-        }*/
-		//if (angle<anglelimitlow || angle>anglelimithigh){
-        //  out = 0;
-        //}
+		kp = angle*50;
+		ki = -anglespeed*5;
+		kd = angleerror*100;
+		out = kp + ki + kd;
+		out = (outprev + out)/2;
+        
         if (angle<anglelimitlow || angle>anglelimithigh || (out>0 && out<lowoutthreshold) || (out<0 && out>(-lowoutthreshold))){
           out = 0;
         }
         
-        //expectedangle = angle*0.5;
-		//expectedangle = angle/(abs(out));
-		//outprev = out;
+        expectedangle = angle*0.7;
+		outprev = out;
         
         Serial.print("out=");
         Serial.print(out);
