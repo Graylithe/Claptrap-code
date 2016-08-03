@@ -68,6 +68,8 @@ float ki;
 float kd;
 float dampout;
 float realangle;
+float dampgyro[3];
+float dgyro;
 
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===
@@ -169,7 +171,7 @@ void setup() {
 	digitalWrite(PWM_A, LOW);
 	digitalWrite(PWM_B, LOW);
 
-	initialangle = 46.40;
+	initialangle = 47.20;
 	expectedangle = initialangle;
 	anglelimithigh = 20;
 	anglelimitlow = -20;
@@ -178,8 +180,12 @@ void setup() {
 	outprev[1] = 0;
 	dampout = 0;
 	realangle = 0;
+	dampgyro[0] = 0;
+	dampgyro[1] = 0;
+	dampgyro[2] = 0;
+	dgyro = 0;
 
-	delay(6000);
+	delay(7000);
 }
 
 
@@ -247,8 +253,8 @@ void loop() {
 		Serial.println((double)accel[2]);
 		*/
 
-		
-		/*Serial.print("gyro\t");
+		/*
+		Serial.print("gyro\t");
 		Serial.print((double)gyro[0]);
 		Serial.print("\t");
 		Serial.print((double)gyro[1]);
@@ -264,22 +270,25 @@ void loop() {
 		Serial.print("\t");
 		Serial.println(ypr[2] * 180/M_PI);
 		*/
-
+		
+		dampgyro[2] = dampgyro[1];
+		dampgyro[1] = dampgyro[0];
+		dampgyro[0] = (float) gyro[1];
+		anglespeed = (dampgyro[0] + dampgyro[1] + dampgyro[2])/3;
+		
+		
 		realangle = ypr[1]*180/M_PI - initialangle;
 		//angle = realangle + dampout*1.7;
 		//angle = realangle + pow(dampout*2,3)*10;
 		angle = realangle;
-		//anglespeed = ((float)gyro[1])+0.5;
-		anglespeed = (float)0;
+		//anglespeed = ((float)gyro[1]) + 0.5;
+		//anglespeed = (float)0;
+		//anglespeed = ( dgyro ) + 0.5;
 		angleerror = angle - expectedangle;
-
-		//kp = pow(angle*0.8,3)*40;
-		//ki = -pow(anglespeed*0.3,3)*1;
-		//kd = pow(angleerror*1.2,3)*50;
 		
-		kp = angle*42;
-		ki = -anglespeed*4;
-		kd = angleerror*106;
+		kp = angle*( abs(angle*0.3) )*62;
+		ki = angleerror*( abs(angle*0.5) )*102;
+		kd = -anglespeed*( min( 5.6/abs(angle) , ((float)250.0) ) )*0.34;
 		out = kp + ki + kd;
 		//out = outprev1*0.6 + out*0.4;
 		out = out*0.5 + outprev[0]*0.3 + outprev[1]*0.2;
@@ -299,13 +308,14 @@ void loop() {
 		outprev[1] = outprev[0];
 		outprev[0] = out;
 		
-		
+		/*
 		Serial.print("dampout=");
 		Serial.print(dampout);
 		Serial.print("  out=");
 		Serial.println(out);
+		*/
 		
-		/*
+		
 		Serial.print("  out=");
 		Serial.print(out);
 		Serial.print("  kp=");
@@ -314,7 +324,7 @@ void loop() {
 		Serial.print(ki);
 		Serial.print("  kd=");
 		Serial.println(kd);
-		*/
+		
 		
 
 		//out=0;
