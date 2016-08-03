@@ -62,11 +62,12 @@ float initialangle;
 float anglelimithigh;
 float anglelimitlow;
 float lowoutthreshold;
-float outprev;
+float outprev[2];
 float kp;
 float ki;
 float kd;
 float dampout;
+float realangle;
 
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===
@@ -168,13 +169,15 @@ void setup() {
 	digitalWrite(PWM_A, LOW);
 	digitalWrite(PWM_B, LOW);
 
-	initialangle = 46.00;
+	initialangle = 46.40;
 	expectedangle = initialangle;
 	anglelimithigh = 20;
 	anglelimitlow = -20;
 	lowoutthreshold = 30;
-	outprev = 0;
+	outprev[0] = 0;
+	outprev[1] = 0;
 	dampout = 0;
+	realangle = 0;
 
 	delay(6000);
 }
@@ -244,13 +247,13 @@ void loop() {
 		Serial.println((double)accel[2]);
 		*/
 
-		/*
-		Serial.print("gyro\t");
+		
+		/*Serial.print("gyro\t");
 		Serial.print((double)gyro[0]);
 		Serial.print("\t");
 		Serial.print((double)gyro[1]);
 		Serial.print("\t");
-		Serial.print((double)gyro[2]);
+		Serial.println((double)gyro[2]);
 		*/
 		  
 		/*
@@ -262,9 +265,11 @@ void loop() {
 		Serial.println(ypr[2] * 180/M_PI);
 		*/
 
-
-		angle = ypr[1]*180/M_PI - initialangle;
-		//anglespeed = (float)gyro[1];
+		realangle = ypr[1]*180/M_PI - initialangle;
+		//angle = realangle + dampout*1.7;
+		//angle = realangle + pow(dampout*2,3)*10;
+		angle = realangle;
+		//anglespeed = ((float)gyro[1])+0.5;
 		anglespeed = (float)0;
 		angleerror = angle - expectedangle;
 
@@ -272,19 +277,27 @@ void loop() {
 		//ki = -pow(anglespeed*0.3,3)*1;
 		//kd = pow(angleerror*1.2,3)*50;
 		
-		kp = angle*45;
-		ki = -anglespeed*5;
-		kd = angleerror*90;
+		kp = angle*42;
+		ki = -anglespeed*4;
+		kd = angleerror*106;
 		out = kp + ki + kd;
-		out = (outprev + out)*0.5;
-		dampout = out*0.003 + dampout*1.0001;
+		//out = outprev1*0.6 + out*0.4;
+		out = out*0.5 + outprev[0]*0.3 + outprev[1]*0.2;
 		
-		if (angle<anglelimitlow || angle>anglelimithigh || (out>0 && out<lowoutthreshold) || (out<0 && out>(-lowoutthreshold))){
-		  out = 0;
+		if (realangle<anglelimitlow || realangle>anglelimithigh){
+			out = 0;
+			dampout = 0;
 		}
+		if((out>0 && out<lowoutthreshold) || (out<0 && out>(-lowoutthreshold))){
+			out = 0;
+		}
+		
+		//dampout = out*0.00003 + dampout*1.00001;
+		dampout = out*0.00002 + dampout*0.950;
 
-		expectedangle = angle*0.8;
-		outprev = out;
+		expectedangle = angle*0.88;
+		outprev[1] = outprev[0];
+		outprev[0] = out;
 		
 		
 		Serial.print("dampout=");
@@ -306,11 +319,11 @@ void loop() {
 
 		//out=0;
 		if (out>0){
-		  digitalWrite(PWM_A, LOW);
-		  analogWrite(PWM_B, constrain(out,0,255));
+			digitalWrite(PWM_A, LOW);
+			analogWrite(PWM_B, constrain(out,0,255));
 		}else{
-		  digitalWrite(PWM_B, LOW);
-		  analogWrite(PWM_A, constrain(-out,0,255));
+			digitalWrite(PWM_B, LOW);
+			analogWrite(PWM_A, constrain(-out,0,255));
 		}
 
 
