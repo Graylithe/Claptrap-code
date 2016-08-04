@@ -70,6 +70,8 @@ float dampout;
 float realangle;
 float dampgyro[3];
 float dgyro;
+bool standstate = true; // true if just standing
+bool standwobble = false; // true-forward, false-backward
 
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===
@@ -281,13 +283,35 @@ void loop() {
 		//angle = realangle + dampout*1.7;
 		//angle = realangle + pow(dampout*2,3)*10;
 		angle = realangle;
+		
+		if (standwobble){
+			angle = angle + 1.7;
+		}else{
+			angle = angle - 1.7;
+		}
+		
+		if ( (realangle-0.3)>0 && outprev[0]>0 ) {
+			standwobble = true;
+		} else if ( (realangle+0.3)<0 && outprev[0]<0 ) {
+			standwobble = false;
+		}
+		
+		/*
+		Serial.print("standwobble=");
+		Serial.print(standwobble);
+		Serial.print("  realangle=");
+		Serial.print(realangle);
+		Serial.print("  out=");
+		Serial.println(out);
+		*/
+		
 		//anglespeed = ((float)gyro[1]) + 0.5;
 		//anglespeed = (float)0;
 		//anglespeed = ( dgyro ) + 0.5;
 		angleerror = angle - expectedangle;
 		
-		kp = angle*( abs(angle*0.3) )*62;
-		ki = angleerror*( abs(angle*0.5) )*102;
+		kp = angle*( abs(angle*0.1) )*54;
+		ki = angleerror*( abs(angle*0.35) )*144;
 		kd = -anglespeed*( min( 5.6/abs(angle) , ((float)250.0) ) )*0.34;
 		out = kp + ki + kd;
 		//out = outprev1*0.6 + out*0.4;
@@ -315,7 +339,7 @@ void loop() {
 		Serial.println(out);
 		*/
 		
-		
+		/*
 		Serial.print("  out=");
 		Serial.print(out);
 		Serial.print("  kp=");
@@ -324,7 +348,7 @@ void loop() {
 		Serial.print(ki);
 		Serial.print("  kd=");
 		Serial.println(kd);
-		
+		*/
 		
 
 		//out=0;
