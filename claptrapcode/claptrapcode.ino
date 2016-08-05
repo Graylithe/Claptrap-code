@@ -173,7 +173,7 @@ void setup() {
 	digitalWrite(PWM_A, LOW);
 	digitalWrite(PWM_B, LOW);
 
-	initialangle = 47.20;
+	initialangle = 47.80;
 	expectedangle = initialangle;
 	anglelimithigh = 20;
 	anglelimitlow = -20;
@@ -225,7 +225,7 @@ void loop() {
 	if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
 		// reset so we can continue cleanly
 		mpu.resetFIFO();
-		Serial.println(F("FIFO overflow!"));
+		//Serial.println(F("FIFO overflow!"));
 	// otherwise, check for DMP data ready interrupt (this should happen frequently)
 	} else if (mpuIntStatus & 0x02) {
 		// wait for correct available data length, should be a VERY short wait
@@ -280,10 +280,11 @@ void loop() {
 		
 		
 		realangle = ypr[1]*180/M_PI - initialangle;
-		//angle = realangle + dampout*1.7;
+		//angle = realangle + constrain( (dampout*0.05) , (float)-3.2, (float)3.2);
 		//angle = realangle + pow(dampout*2,3)*10;
 		angle = realangle;
 		
+		/*
 		if (standwobble){
 			angle = angle + 1.7;
 		}else{
@@ -294,7 +295,7 @@ void loop() {
 			standwobble = true;
 		} else if ( (realangle+0.3)<0 && outprev[0]<0 ) {
 			standwobble = false;
-		}
+		}*/
 		
 		/*
 		Serial.print("standwobble=");
@@ -305,14 +306,23 @@ void loop() {
 		Serial.println(out);
 		*/
 		
+		/*
+		Serial.print("dampout=");
+		Serial.print(dampout);
+		Serial.print("  realangle=");
+		Serial.print(realangle);
+		Serial.print("  angle=");
+		Serial.println(angle);
+		*/
+		
 		//anglespeed = ((float)gyro[1]) + 0.5;
 		//anglespeed = (float)0;
 		//anglespeed = ( dgyro ) + 0.5;
 		angleerror = angle - expectedangle;
 		
-		kp = angle*( abs(angle*0.1) )*54;
-		ki = angleerror*( abs(angle*0.35) )*144;
-		kd = -anglespeed*( min( 5.6/abs(angle) , ((float)250.0) ) )*0.34;
+		kp = angle*( abs(angle*0.08) )*102;
+		ki = angleerror*( abs(angle*0.60) )*190;
+		kd = -anglespeed*( min( 4/abs(angle) , ((float)250.0) ) )*0.38;
 		out = kp + ki + kd;
 		//out = outprev1*0.6 + out*0.4;
 		out = out*0.5 + outprev[0]*0.3 + outprev[1]*0.2;
@@ -326,7 +336,7 @@ void loop() {
 		}
 		
 		//dampout = out*0.00003 + dampout*1.00001;
-		dampout = out*0.00002 + dampout*0.950;
+		//dampout = out*0.01 + dampout*0.88;
 
 		expectedangle = angle*0.88;
 		outprev[1] = outprev[0];
@@ -363,6 +373,7 @@ void loop() {
 
 		// blink LED to indicate activity
 		blinkState = !blinkState;
-		digitalWrite(LED_PIN, blinkState);
+		//digitalWrite(LED_PIN, blinkState);
+		digitalWrite(LED_PIN, false);
 	}
 }
