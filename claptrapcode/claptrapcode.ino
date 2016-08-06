@@ -72,6 +72,9 @@ float dampgyro[3];
 float dgyro;
 bool standstate = true; // true if just standing
 bool standwobble = false; // true-forward, false-backward
+float kicum;
+float counter;
+float absangle;
 
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===
@@ -173,7 +176,7 @@ void setup() {
 	digitalWrite(PWM_A, LOW);
 	digitalWrite(PWM_B, LOW);
 
-	initialangle = 47.80;
+	initialangle = 47.62;
 	expectedangle = initialangle;
 	anglelimithigh = 20;
 	anglelimitlow = -20;
@@ -186,6 +189,9 @@ void setup() {
 	dampgyro[1] = 0;
 	dampgyro[2] = 0;
 	dgyro = 0;
+	kicum = 0;
+	counter = 1;
+	absangle = 0;
 
 	delay(7000);
 }
@@ -197,6 +203,7 @@ void setup() {
 // ================================================================
 
 void loop() {
+	
 	// if programming failed, don't try to do anything
 	if (!dmpReady) return;
 
@@ -320,12 +327,16 @@ void loop() {
 		//anglespeed = ( dgyro ) + 0.5;
 		angleerror = angle - expectedangle;
 		
-		kp = angle*( abs(angle*0.08) )*102;
-		ki = angleerror*( abs(angle*0.60) )*190;
-		kd = -anglespeed*( min( 4/abs(angle) , ((float)250.0) ) )*0.38;
+		kicum = (angle + kicum*0.80);
+		
+		absangle = abs(angle);
+		
+		kp = angle*absangle*7 + angleerror*190;
+		ki = min( (kicum/counter) , 0.3 )*400;
+		kd = -anglespeed*( min(4/absangle, (float)500.0) )*( absangle )*0.1;
 		out = kp + ki + kd;
 		//out = outprev1*0.6 + out*0.4;
-		out = out*0.5 + outprev[0]*0.3 + outprev[1]*0.2;
+		out = out*0.7 + outprev[0]*0.2 + outprev[1]*0.1;
 		
 		if (realangle<anglelimitlow || realangle>anglelimithigh){
 			out = 0;
@@ -335,10 +346,16 @@ void loop() {
 			out = 0;
 		}
 		
+		counter++;
+		if (counter>4096){
+			kicum = (kicum/counter)*10;
+			counter = 10;
+		}
+		
 		//dampout = out*0.00003 + dampout*1.00001;
 		//dampout = out*0.01 + dampout*0.88;
 
-		expectedangle = angle*0.88;
+		expectedangle = angle*0.80;
 		outprev[1] = outprev[0];
 		outprev[0] = out;
 		
@@ -372,8 +389,8 @@ void loop() {
 
 
 		// blink LED to indicate activity
-		blinkState = !blinkState;
+		//blinkState = !blinkState;
 		//digitalWrite(LED_PIN, blinkState);
-		digitalWrite(LED_PIN, false);
+		//digitalWrite(LED_PIN, false);
 	}
 }
